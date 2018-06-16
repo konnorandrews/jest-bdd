@@ -1,0 +1,23 @@
+{
+  "name": "jest-bdd",
+  "version": "0.2.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "watch": "jest --watchAll"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konnorandrews/jest-bdd.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/konnorandrews/jest-bdd/issues"
+  },
+  "homepage": "https://github.com/konnorandrews/jest-bdd#readme",
+  "devDependencies": {
+    "jest": "^23.1.0"
+  }
+}
