@@ -1,5 +1,16 @@
 'use strict';
 
+const after = (promise, callback) => {
+  try{
+    return promise()
+      .then(result => { callback(result); return result })
+      .catch(e => { callback(e); return Promise.reject(e) })
+  }catch(e){
+    callback(e);
+    return Promise.reject(e)
+  }
+}
+
 const define = ({scope, name, block}) => {
   let value, isEvaluated = false
   Object.defineProperty(scope, name, {
@@ -50,8 +61,10 @@ const Rules = () => new Proxy({
   }
 })
 
-const bindToRules = (scope, callback) => (rules, ...args) =>
-  rules.obj.$add(rules.prop, rules.prop.replace(/\_/g, ' '), name => callback(name, ...args), scope)
+const bindToRules = (binds) => (rules, ...args) =>
+  binds.forEach(bind =>
+    rules.obj.$add(rules.prop, rules.prop.replace(/\_/g, ' '), name => bind.clause(name, ...args), bind.scope)
+  )
 
 const group = (title) => (name, code, whens) => {
   describe(title + name, () => {
@@ -76,9 +89,42 @@ const then = (name, code) => () => test('Then: ' + name, code)
 
 then.only = (name, code) => () => test.only('Then: ' + name, code)
 
-const Given = bindToRules(given, (name, code) => (...tests) => () => group('Given: ')(name, code, tests))
-const When = bindToRules(when, (name, code) => (...tests) => () => group('When: ')(name, code, tests))
-const Then = bindToRules(then, (name, code) => () => test('Then: ' + name, code))
+const Given = bindToRules([
+  //{scope: given, clause: (name, code) => (...tests) => () => group('Given: ')(name, code, tests)},
+  {scope: given, clause: (name, code) => (...args) => {
+    console.log('given args', args)
+    if(!(args[0] instanceof Function)){
+      return (...tests) => () => group('Given: ')(name, () => {
+        Object.entries(args[0]).forEach(([ key, value ]) => define({scope: global, name: key, block: () => value}))
+        return after(() => Promise.resolve(code()), () => {
+          Object.keys(args[0]).forEach(key => undefine({scope: global, name: key}))
+        })
+      }, tests)
+    }else{
+      return () => group('Given: ')(name, code, args)
+    }
+  }},
+])
+
+const When = bindToRules([{scope: when, clause: (name, code) => (...tests) => () => group('When: ')(name, code, tests)}])
+
+const Then = bindToRules([
+  {scope: then, clause: (name, code) => () => test('Then: ' + name, code)},
+  //{scope: then.only, clause: (name, code) => () => test.only('Then only: ' + name, code)}
+  {scope: then.only, clause: (name, code) => (args) => {
+    console.log('then args', args)
+    if(args){
+      return () => test.only('Then only: ' + name, () => {
+        Object.entries(args).forEach(([ key, value ]) => define({scope: global, name: key, block: () => value}))
+        return after(() => Promise.resolve(code()), () => {
+          Object.keys(args).forEach(key => undefine({scope: global, name: key}))
+        })
+      })
+    }else{
+      return test.only('Then only: ' + name, code)
+    }
+  }}
+])
 
 const unit = (...clauses) => clauses.forEach(clause => clause())
 

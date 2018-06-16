@@ -56,3 +56,41 @@ rules.useWith(() => unit(
     )
   )
 ))
+
+Given(rules.rules_with_args, () => {})
+
+Given(rules.the_number, () => {
+  scope.num = n
+})
+
+Then(rules.the_number_is, () => {
+  expect(num).toBe(typeof n != 'undefined' ? n : 0)
+})
+
+rules.useWith(() => unit(
+  given.rules_with_args(
+    given.the_number({n: 103})(
+      then.only.the_number_is({n: 103})
+    )
+  )
+))
+
+// const after = (promise, callback) => {
+//   try{
+//     return promise()
+//       .then(result => { callback(result); return result })
+//       .catch(e => { callback(e); return Promise.reject(e) })
+//   }catch(e){
+//     callback(e);
+//     return Promise.reject(e)
+//   }
+// }
+//
+// test.only('demo', () => {
+//   return after(() => Promise.resolve((() => {
+//     return 10
+//   })()), x => {
+//     console.log('what is this?')
+//     console.log('test', x)
+//   })
+// })
