@@ -59,18 +59,24 @@ rules.useWith(() => unit(
 
 Given(rules.rules_with_args, () => {})
 
-Given(rules.the_number, () => {
+Given(rules.the_number, ({ n = 0 }) => {
   scope.num = n
 })
 
-Then(rules.the_number_is, () => {
-  expect(num).toBe(typeof n != 'undefined' ? n : 0)
+Then(rules.the_number_is, ({ n = 0 }) => {
+  expect(num).toBe(n)
 })
 
 rules.useWith(() => unit(
   given.rules_with_args(
-    given.the_number({n: 103})(
-      then.only.the_number_is({n: 103})
+    given.the_number(
+      then.the_number_is
+    ),
+    given.the_number({n: 104})(
+      then.the_number_is({n: 104})
+    ),
+    given.the_number({n: 105})(
+      then.the_number_is({n: 105})
     )
   )
 ))

@@ -83,6 +83,14 @@ const group = (title) => (name, code, whens) => {
   })
 }
 
+const allowArgs = clause => (...args) => {
+  if(args.length > 0 && !(args[0] instanceof Function)){
+    return (...tests) => clause(args, tests)
+  }else{
+    return clause([{}], args)
+  }
+}
+
 const given = (name, code, ...whens) => () => group('Given: ')(name, code, whens)
 const when = (name, code, ...thens) => () => group('When: ')(name, code, thens)
 const then = (name, code) => () => test('Then: ' + name, code)
@@ -90,40 +98,16 @@ const then = (name, code) => () => test('Then: ' + name, code)
 then.only = (name, code) => () => test.only('Then: ' + name, code)
 
 const Given = bindToRules([
-  //{scope: given, clause: (name, code) => (...tests) => () => group('Given: ')(name, code, tests)},
-  {scope: given, clause: (name, code) => (...args) => {
-    console.log('given args', args)
-    if(!(args[0] instanceof Function)){
-      return (...tests) => () => group('Given: ')(name, () => {
-        Object.entries(args[0]).forEach(([ key, value ]) => define({scope: global, name: key, block: () => value}))
-        return after(() => Promise.resolve(code()), () => {
-          Object.keys(args[0]).forEach(key => undefine({scope: global, name: key}))
-        })
-      }, tests)
-    }else{
-      return () => group('Given: ')(name, code, args)
-    }
-  }},
+  {scope: given, clause: (name, code) => allowArgs((args, tests) => () => group('Given: ')(name, () => code(...args), tests)) }
 ])
 
-const When = bindToRules([{scope: when, clause: (name, code) => (...tests) => () => group('When: ')(name, code, tests)}])
+const When = bindToRules([
+  {scope: when, clause: (name, code) => allowArgs((args, tests) => () => group('When: ')(name, () => code(...args), tests))}
+])
 
 const Then = bindToRules([
-  {scope: then, clause: (name, code) => () => test('Then: ' + name, code)},
-  //{scope: then.only, clause: (name, code) => () => test.only('Then only: ' + name, code)}
-  {scope: then.only, clause: (name, code) => (args) => {
-    console.log('then args', args)
-    if(args){
-      return () => test.only('Then only: ' + name, () => {
-        Object.entries(args).forEach(([ key, value ]) => define({scope: global, name: key, block: () => value}))
-        return after(() => Promise.resolve(code()), () => {
-          Object.keys(args).forEach(key => undefine({scope: global, name: key}))
-        })
-      })
-    }else{
-      return test.only('Then only: ' + name, code)
-    }
-  }}
+  {scope: then, clause: (name, code) => allowArgs(args => test('Then only: ' + name, () => code(...args)))},
+  {scope: then.only, clause: (name, code) => allowArgs(args => test.only('Then only: ' + name, () => code(...args)))}
 ])
 
 const unit = (...clauses) => clauses.forEach(clause => clause())
