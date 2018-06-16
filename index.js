@@ -35,7 +35,7 @@ const Rules = () => new Proxy({
   $add(prop, name, value, scope){
     this.$list.push({prop, name, value, scope})
   },
-  useWith(){
+  useWith(callback){
     this.$apply()
     callback()
     this.$remove()
@@ -58,16 +58,12 @@ const group = (title) => (name, code, whens) => {
     beforeEach(() => {
       define({scope: global, name: 'scope', block: () => ({})})
       return Promise.resolve(code()).then(result => {
-        for(key in scope){
-          define({scope: global, name: key, block: (x => () => x)(scope[key])})
-        }
+        Object.keys(scope ? scope : {}).forEach(key => define({scope: global, name: key, block: (x => () => x)(scope[key])}))
         return result
       })
     })
     afterEach(() => {
-      for(key in scope){
-        undefine({scope: global, name: key})
-      }
+      Object.keys(scope ? scope : {}).forEach(key => undefine({scope: global, name: key}))
       undefine({scope: global, name: 'scope'})
     })
     whens.forEach(when => when())
@@ -84,7 +80,7 @@ const Given = bindToRules(given, (name, code) => (...tests) => () => group('Give
 const When = bindToRules(when, (name, code) => (...tests) => () => group('When: ')(name, code, tests))
 const Then = bindToRules(then, (name, code) => () => test('Then: ' + name, code))
 
-const unit = (...clauses) => clauses.forEach(clause => func())
+const unit = (...clauses) => clauses.forEach(clause => clause())
 
 module.exports = {
   given, when, then, /*and,*/ // use inline
