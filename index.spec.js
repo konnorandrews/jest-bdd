@@ -61,10 +61,31 @@ Given(rules.rules_with_args, () => {})
 
 Given(rules.the_number, ({ n }) => {
   scope.num = n
-})
+}, {hiddenArgs: ['n']})
 
 Then(rules.the_number_is, ({ n }) => {
   expect(num).toBe(n)
+})
+
+Given(rules.a_and_b, ({ a, b }) => {
+  scope.a = a
+  scope.b = b
+})
+
+When(rules.added, () => {
+  scope.sum = a + b
+})
+
+When(rules.subtracted, () => {
+  scope.sum = a - b
+})
+
+When(rules.custom_operator, ({ operator }) => {
+  scope.sum = operator(a, b)
+}, {hiddenArgs: ['operator']})
+
+Then(rules.the_result_is, ({ n }) => {
+  expect(sum).toBe(n)
 })
 
 rules.useWith(() => unit(
@@ -74,6 +95,17 @@ rules.useWith(() => unit(
     ),
     given.the_number({n: 5})(
       then.the_number_is({n: 5})
+    ),
+    given.a_and_b({a:10, b: 5})(
+      when.added(
+        then.the_result_is({n: 15})
+      ),
+      when.subtracted(
+        then.the_result_is({n: 5})
+      ),
+      when.custom_operator('*')({operator: (a, b) => a * b})(
+        then.the_result_is({n: 50})
+      )
     )
   )
 ))

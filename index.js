@@ -83,16 +83,18 @@ const group = (title) => (name, code, whens) => {
   })
 }
 
-const allowArgs = clause => (...args) => {
-  if(args.length > 0 && !(args[0] instanceof Function)){
-    return (...tests) => clause(args, tests)
+const allowArgs = (clause, description) => (...args) => {
+  if(typeof args[0] === 'string'){
+    return allowArgs(clause, args[0])
+  }else if(args.length > 0 && !(args[0] instanceof Function)){
+    return (...tests) => clause(args, tests, description)
   }else{
-    return clause([{}], args)
+    return clause([{}], args, description)
   }
 }
 
-const printArgs = args => args.reduce(
-  (str, arg) => str + ' ' + Object.entries(arg).reduce(
+const printArgs = (args, hidden = []) => args.reduce(
+  (str, arg) => str + ' ' + Object.entries(arg).filter(([ key ]) => !hidden.includes(key)).reduce(
     (str, [ key, value ]) => str + ', ' + key + '=' + JSON.stringify(value)
   , '').slice(2)
 , '').slice(1)
@@ -104,23 +106,23 @@ const then = (name, code) => () => test('Then: ' + name, code)
 then.only = (name, code) => () => test.only('Then: ' + name, code)
 
 const Given = bindToRules([
-  {scope: given, clause: (name, code) => allowArgs(
-    (args, tests) => () => group('Given: ')(name + ' ' + printArgs(args), () => code(...args), tests)
+  {scope: given, clause: (name, code, opts) => allowArgs(
+    (args, tests, description) => () => group('Given: ')(name + (description ? ' ' + description : '') + (opts && opts.hideAllArgs ? '' : ' ' + printArgs(args, opts ? opts.hiddenArgs : [])), () => code(...args), tests)
   )}
 ])
 
 const When = bindToRules([
-  {scope: when, clause: (name, code) => allowArgs(
-    (args, tests) => () => group('When: ')(name + ' ' + printArgs(args), () => code(...args), tests)
+  {scope: when, clause: (name, code, opts) => allowArgs(
+    (args, tests, description) => () => group('When: ')(name + (description ? ' ' + description : '') + (opts && opts.hideAllArgs ? '' : ' ' + printArgs(args, opts ? opts.hiddenArgs : [])), () => code(...args), tests)
   )}
 ])
 
 const Then = bindToRules([
-  {scope: then, clause: (name, code) => allowArgs(
-    args => test('Then: ' + name + ' ' + printArgs(args), () => code(...args))
+  {scope: then, clause: (name, code, opts) => allowArgs(
+    (args, tests, description) => test('Then: ' + name + (description ? ' ' + description : '') + (opts && opts.hideAllArgs ? '' : ' ' + printArgs(args, opts ? opts.hiddenArgs : [])), () => code(...args))
   )},
-  {scope: then.only, clause: (name, code) => allowArgs(
-    args => test.only('Then only: ' + name + ' ' + printArgs(args), () => code(...args))
+  {scope: then.only, clause: (name, code, opts) => allowArgs(
+    (args, tests, description) => test.only('Then only: ' + name + (description ? ' ' + description : '') + (opts && opts.hideAllArgs ? '' : ' ' + printArgs(args, opts ? opts.hiddenArgs : [])), () => code(...args))
   )}
 ])
 
