@@ -91,6 +91,12 @@ const allowArgs = clause => (...args) => {
   }
 }
 
+const printArgs = args => args.reduce(
+  (str, arg) => str + ' ' + Object.entries(arg).reduce(
+    (str, [ key, value ]) => str + ', ' + key + '=' + JSON.stringify(value)
+  , '').slice(2)
+, '').slice(1)
+
 const given = (name, code, ...whens) => () => group('Given: ')(name, code, whens)
 const when = (name, code, ...thens) => () => group('When: ')(name, code, thens)
 const then = (name, code) => () => test('Then: ' + name, code)
@@ -98,16 +104,24 @@ const then = (name, code) => () => test('Then: ' + name, code)
 then.only = (name, code) => () => test.only('Then: ' + name, code)
 
 const Given = bindToRules([
-  {scope: given, clause: (name, code) => allowArgs((args, tests) => () => group('Given: ')(name, () => code(...args), tests)) }
+  {scope: given, clause: (name, code) => allowArgs(
+    (args, tests) => () => group('Given: ')(name + ' ' + printArgs(args), () => code(...args), tests)
+  )}
 ])
 
 const When = bindToRules([
-  {scope: when, clause: (name, code) => allowArgs((args, tests) => () => group('When: ')(name, () => code(...args), tests))}
+  {scope: when, clause: (name, code) => allowArgs(
+    (args, tests) => () => group('When: ')(name + ' ' + printArgs(args), () => code(...args), tests)
+  )}
 ])
 
 const Then = bindToRules([
-  {scope: then, clause: (name, code) => allowArgs(args => test('Then only: ' + name, () => code(...args)))},
-  {scope: then.only, clause: (name, code) => allowArgs(args => test.only('Then only: ' + name, () => code(...args)))}
+  {scope: then, clause: (name, code) => allowArgs(
+    args => test('Then: ' + name + ' ' + printArgs(args), () => code(...args))
+  )},
+  {scope: then.only, clause: (name, code) => allowArgs(
+    args => test.only('Then only: ' + name + ' ' + printArgs(args), () => code(...args))
+  )}
 ])
 
 const unit = (...clauses) => clauses.forEach(clause => clause())
